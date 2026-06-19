@@ -1,0 +1,12 @@
+# Don't copy local junk into the image — smaller, faster, more secure builds.
+.venv
+venv
+__pycache__
+*.pyc
+*.db
+.env
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md

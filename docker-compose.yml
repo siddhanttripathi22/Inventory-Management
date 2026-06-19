@@ -1,0 +1,52 @@
+# Orchestrates the whole system: database + backend API + frontend.
+# Run everything with:  docker compose up --build
+# Then open the app at:  http://localhost:8080
+
+services:
+  # ---------- PostgreSQL ----------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ioms}
+    # Named volume = data survives container restarts (persistent storage).
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Backend waits until this passes, so it never starts before the DB is ready.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ioms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------- Backend (FastAPI) ----------
+  backend:
+    build: ./backend
+    environment:
+      # Credentials come from the environment, never hardcoded in the image.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ioms}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      LOW_STOCK_THRESHOLD: ${LOW_STOCK_THRESHOLD:-10}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8000:8000" # exposed so you can open the API docs at localhost:8000/docs
+
+  # ---------- Frontend (React build served by nginx) ----------
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80" # the app: http://localhost:8080
+
+volumes:
+  pgdata:
