@@ -3,7 +3,7 @@ import axios from "axios";
 // Base URL comes from the environment:
 //  - dev: empty string, so requests go to "/products" and Vite proxies them
 //  - production: the deployed backend URL injected at build time as VITE_API_URL
-const baseURL = import.meta.env.VITE_API_URL || "/api";
+const baseURL = import.meta.env.VITE_API_URL || "https://inventory-management-q1wc.onrender.com/";
 
 export const api = axios.create({ baseURL });
 
